@@ -1,10 +1,7 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
 const connectDB = require('./config/db');
-
-// Load env vars
-dotenv.config();
 
 // Connect to database
 connectDB();
@@ -12,7 +9,10 @@ connectDB();
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173',
+  credentials: true
+}));
 app.use(express.json());
 
 // Routes
@@ -23,6 +23,50 @@ app.use('/api/analytics', require('./routes/analyticsRoutes'));
 // Basic route
 app.get('/', (req, res) => {
   res.send('DevTrackr API Running');
+});
+
+// Health check
+app.get('/api/health', require('mongoose').connection ? (req, res) => {
+  const mongoose = require('mongoose');
+  res.json({
+    status: "ok",
+    mongo: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
+    githubToken: !!process.env.GITHUB_TOKEN,
+    geminiKey: !!process.env.GEMINI_API_KEY
+  });
+} : (req, res) => res.json({ status: "error" }));
+
+// AI Test route
+app.get('/api/ai/test', async (req, res) => {
+  try {
+    const axios = require('axios');
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ error: "No GEMINI_API_KEY in backend .env" });
+    }
+    const prompt = "Return only this JSON: {\"summary\":\"Gemini working\",\"bottlenecks\":[],\"recommendations\":[]}";
+    const response = await axios.post(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      {
+        contents: [{ parts: [{ text: prompt }] }]
+      },
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+    
+    let rawText = response.data.candidates[0].content.parts[0].text;
+    let cleanedText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+    
+    let parsed;
+    try {
+      parsed = JSON.parse(cleanedText);
+    } catch(e) {
+      parsed = { error: "Failed to parse", raw: rawText };
+    }
+    
+    res.json({ raw: rawText, parsed });
+  } catch (error) {
+    console.error("Gemini Test Error:", error.response?.data || error.message);
+    res.status(500).json({ error: error.response?.data || error.message });
+  }
 });
 
 // Error handling middleware

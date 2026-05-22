@@ -22,6 +22,10 @@ const userSchema = new mongoose.Schema({
   githubToken: {
     type: String,
     default: '',
+  },
+  connectedAt: {
+    type: Date,
+    default: null,
   }
 }, {
   timestamps: true,

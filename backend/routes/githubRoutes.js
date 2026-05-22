@@ -14,4 +14,8 @@ router.post("/disconnect", protect, disconnectGithub);
 router.get("/repos/:username", protect, getRepos);
 router.get("/repo/:owner/:repo/analytics", protect, getRepoAnalytics);
 
+// Direct test route without auth
+const { testGithub } = require("../controllers/githubController");
+router.get("/test/:username", testGithub);
+
 module.exports = router;

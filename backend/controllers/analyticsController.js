@@ -83,49 +83,15 @@ const getAnalytics = async (req, res) => {
   }
 };
 
-// @desc    Get dashboard summary (aggregate analytics for all connected repos)
-// @route   GET /api/analytics/summary/all
-// @access  Private
-const getDashboardSummary = async (req, res) => {
+const getLatestAnalytics = async (req, res) => {
   try {
-    const analytics = await Analytics.find({ user: req.user._id });
+    const latestAnalytics = await Analytics.findOne({ userId: req.user._id }).sort({ analyzedAt: -1 });
     
-    if (!analytics || analytics.length === 0) {
-      return res.json({
-        totalCommits: 0,
-        totalPullRequests: 0,
-        totalIssues: 0,
-        averageHealthScore: 0,
-        averageSprintCompletion: 0,
-        reposAnalyzed: 0
-      });
+    if (!latestAnalytics) {
+      return res.status(404).json({ message: "No analytics found. Analyze a repository first." });
     }
     
-    const summary = analytics.reduce((acc, curr) => {
-      acc.totalCommits += curr.commitCount;
-      acc.totalPullRequests += curr.pullRequests;
-      acc.totalIssues += curr.issues;
-      acc.totalHealthScore += curr.healthScore;
-      acc.totalSprintCompletion += curr.sprintCompletion;
-      return acc;
-    }, { 
-      totalCommits: 0, 
-      totalPullRequests: 0, 
-      totalIssues: 0, 
-      totalHealthScore: 0, 
-      totalSprintCompletion: 0 
-    });
-    
-    const count = analytics.length;
-    
-    res.json({
-      totalCommits: summary.totalCommits,
-      totalPullRequests: summary.totalPullRequests,
-      totalIssues: summary.totalIssues,
-      averageHealthScore: Math.round(summary.totalHealthScore / count),
-      averageSprintCompletion: Math.round(summary.totalSprintCompletion / count),
-      reposAnalyzed: count
-    });
+    res.json(latestAnalytics);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -161,6 +127,6 @@ const getChartData = async (req, res) => {
 
 module.exports = {
   getAnalytics,
-  getDashboardSummary,
+  getLatestAnalytics,
   getChartData
 };

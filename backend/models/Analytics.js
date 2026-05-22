@@ -1,45 +1,50 @@
 const mongoose = require('mongoose');
 
 const analyticsSchema = new mongoose.Schema({
-  user: {
+  userId: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
     ref: 'User',
   },
-  repoId: {
+  repositoryId: {
     type: String,
     required: true,
   },
-  commitCount: {
-    type: Number,
-    default: 0,
-  },
-  pullRequests: {
-    type: Number,
-    default: 0,
-  },
-  issues: {
-    type: Number,
-    default: 0,
-  },
-  aiSummary: {
+  repoName: {
     type: String,
+    required: true,
   },
-  recommendations: {
-    type: [String],
-    default: [],
+  owner: {
+    type: String,
+    required: true,
   },
-  healthScore: {
-    type: Number,
-    default: 100,
+  metrics: {
+    type: Object,
+    default: {}
   },
-  activeContributors: {
-    type: Number,
-    default: 0,
+  chartData: {
+    type: Array,
+    default: []
   },
-  sprintCompletion: {
-    type: Number,
-    default: 0,
+  contributors: {
+    type: Array,
+    default: []
+  },
+  recentCommits: {
+    type: Array,
+    default: []
+  },
+  aiInsights: {
+    type: Object,
+    default: {
+      summary: "",
+      bottlenecks: [],
+      recommendations: []
+    }
+  },
+  analyzedAt: {
+    type: Date,
+    default: Date.now,
   }
 }, {
   timestamps: true,

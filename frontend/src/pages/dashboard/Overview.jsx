@@ -30,16 +30,18 @@ const Overview = () => {
   const { user } = useContext(AuthContext);
 
   useEffect(() => {
-    // Read from localStorage
-    const cachedData = localStorage.getItem('devtrackr_analytics');
-    if (cachedData) {
+    const fetchLatestAnalytics = async () => {
       try {
-        setAnalytics(JSON.parse(cachedData));
+        const { data } = await api.get('/analytics/latest');
+        setAnalytics(data);
       } catch (err) {
-        console.error("Failed to parse analytics", err);
+        console.error("Failed to fetch analytics", err);
+      } finally {
+        setLoading(false);
       }
-    }
-    setLoading(false);
+    };
+    
+    fetchLatestAnalytics();
   }, []);
 
   if (loading) return <div className="animate-pulse">Loading dashboard...</div>;
@@ -190,7 +192,7 @@ const Overview = () => {
           className="glass-card p-6 bg-primary/5 border border-primary/20"
         >
           <h3 className="text-xl font-bold mb-4 text-primary flex items-center gap-2">
-            <span className="text-2xl">✨</span> Recent AI Insights ({analytics.repo?.name})
+            <span className="text-2xl">✨</span> Latest Repo You Opened ({analytics.repo?.name})
           </h3>
           <p className="text-textMain mb-4">{aiInsights.summary}</p>
           

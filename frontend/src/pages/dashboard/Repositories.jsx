@@ -64,8 +64,6 @@ const Repositories = () => {
       
       const res = await api.get(`/github/repo/${owner}/${repoName}/analytics`);
       setAnalyticsData(res.data);
-      // Save to localStorage for Overview
-      localStorage.setItem('devtrackr_analytics', JSON.stringify(res.data));
     } catch (err) {
       setAnalyticsError(err.response?.data?.message || 'Failed to analyze repository');
     } finally {
@@ -181,7 +179,7 @@ const Repositories = () => {
               {analyticsData.aiInsights && (
                 <div className="mt-6 bg-primary/10 border border-primary/20 p-6 rounded-lg">
                   <h4 className="text-xl font-bold mb-4 text-primary flex items-center gap-2">
-                    <span className="text-2xl">✨</span> AI Insights (Gemini)
+                    <span className="text-2xl">✨</span> AI Insights
                   </h4>
                   
                   <div className="space-y-4">

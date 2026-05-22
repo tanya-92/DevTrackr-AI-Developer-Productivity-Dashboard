@@ -1,12 +1,12 @@
 const mongoose = require('mongoose');
 
 const repositorySchema = new mongoose.Schema({
-  user: {
+  userId: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
     ref: 'User',
   },
-  repoId: {
+  githubId: {
     type: String,
     required: true,
   },
@@ -18,10 +18,11 @@ const repositorySchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  description: {
+  owner: {
     type: String,
+    required: true,
   },
-  url: {
+  htmlUrl: {
     type: String,
     required: true,
   },
@@ -39,6 +40,13 @@ const repositorySchema = new mongoose.Schema({
   openIssues: {
     type: Number,
     default: 0,
+  },
+  private: {
+    type: Boolean,
+    default: false,
+  },
+  updatedAtGithub: {
+    type: Date,
   }
 }, {
   timestamps: true,

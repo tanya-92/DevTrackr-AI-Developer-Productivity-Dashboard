@@ -20,13 +20,46 @@ const connectGitHub = async (req, res) => {
     if (req.user) {
       await User.findByIdAndUpdate(req.user._id, {
         githubUsername: username,
+        connectedAt: new Date()
       });
     }
+
+    // Persist repos in MongoDB
+    if (req.user && reposRes.data && Array.isArray(reposRes.data)) {
+      const ops = reposRes.data.map(repo => ({
+        updateOne: {
+          filter: { githubId: repo.id.toString(), userId: req.user._id },
+          update: {
+            $set: {
+              userId: req.user._id,
+              githubId: repo.id.toString(),
+              name: repo.name,
+              fullName: repo.full_name,
+              owner: repo.owner.login,
+              htmlUrl: repo.html_url,
+              language: repo.language,
+              stars: repo.stargazers_count,
+              forks: repo.forks_count,
+              openIssues: repo.open_issues_count,
+              private: repo.private,
+              updatedAtGithub: repo.updated_at
+            }
+          },
+          upsert: true
+        }
+      }));
+      if (ops.length > 0) {
+        await Repository.bulkWrite(ops);
+      }
+    }
+    
+    // Fetch newly saved repos from DB
+    const savedRepos = await Repository.find({ userId: req.user._id }).sort({ updatedAtGithub: -1 });
 
     return res.status(200).json({
       message: "GitHub connected successfully",
       profile: profileRes.data,
-      repos: reposRes.data,
+      repos: savedRepos,
     });
   } catch (error) {
     console.error("GitHub connect error:", error.response?.data || error.message);
@@ -71,39 +104,25 @@ const disconnectGithub = async (req, res) => {
 
 const getRepos = async (req, res) => {
   try {
-    const { username } = req.params;
+    const repos = await Repository.find({ userId: req.user._id }).sort({ updatedAtGithub: -1 });
     
-    if (!username) {
-      return res.status(400).json({ message: "GitHub username is required" });
-    }
-    
-    const github = getGitHubClient();
-    const reposRes = await github.get(`/users/${username}/repos?sort=updated&per_page=100`);
-    
-    const formattedRepos = reposRes.data.map(repo => ({
-      repoId: repo.id.toString(),
+    // Map repos back to the format the frontend expects (or frontend can just use the DB schema)
+    // The previous frontend expected repoId, name, fullName, description, url, language, stars, forks, openIssues
+    const formattedRepos = repos.map(repo => ({
+      repoId: repo.githubId,
       name: repo.name,
-      fullName: repo.full_name,
-      description: repo.description,
-      url: repo.html_url,
+      fullName: repo.fullName,
+      description: repo.description || "",
+      url: repo.htmlUrl,
       language: repo.language,
-      stars: repo.stargazers_count,
-      forks: repo.forks_count,
-      openIssues: repo.open_issues_count
+      stars: repo.stars,
+      forks: repo.forks,
+      openIssues: repo.openIssues
     }));
     
     return res.status(200).json(formattedRepos);
   } catch (error) {
-    if (error.message === "GitHub token missing in backend .env") {
-      return res.status(500).json({ message: error.message });
-    }
-    if (error.response?.status === 404) {
-      return res.status(404).json({ message: "GitHub user not found" });
-    }
-    if (error.response?.status === 403) {
-      return res.status(403).json({ message: "GitHub API rate limit exceeded" });
-    }
-    return res.status(500).json({ message: error.message || "Failed to fetch repositories" });
+    return res.status(500).json({ message: error.message || "Failed to fetch repositories from database" });
   }
 };
 
@@ -146,45 +165,13 @@ const getRepoAnalytics = async (req, res) => {
       issuesData
     );
 
-    const repository = await Repository.findOne({ fullName: `${owner}/${repo}`, user: req.user._id });
+    const repository = await Repository.findOne({ fullName: `${owner}/${repo}`, userId: req.user._id });
     
-    if (repository) {
-      let analytics = await Analytics.findOne({ repoId: repository.repoId, user: req.user._id });
-      if (analytics) {
-        analytics.commitCount = commitsData.length;
-        analytics.pullRequests = pullsData.length;
-        analytics.issues = issuesData.length;
-        analytics.activeContributors = contributorsData.length;
-        analytics.aiSummary = insights.summary;
-        // Keep recommendations array compatibility 
-        analytics.recommendations = insights.recommendations || [];
-        analytics.healthScore = healthScore;
-        analytics.sprintCompletion = sprintCompletion;
-        await analytics.save();
-      } else {
-        await Analytics.create({
-          user: req.user._id,
-          repoId: repository.repoId,
-          commitCount: commitsData.length,
-          pullRequests: pullsData.length,
-          issues: issuesData.length,
-          activeContributors: contributorsData.length,
-          aiSummary: insights.summary,
-          recommendations: insights.recommendations || [],
-          healthScore: healthScore,
-          sprintCompletion: sprintCompletion
-        });
-      }
-    }
-
-    return res.status(200).json({
-      repo: {
-        name: repoDetails.name,
-        owner: repoDetails.owner?.login || owner,
-        language: repoDetails.language,
-        stars: repoDetails.stargazers_count || 0,
-        forks: repoDetails.forks_count || 0
-      },
+    const analyticsPayload = {
+      userId: req.user._id,
+      repositoryId: repository ? repository.githubId : repo,
+      repoName: repoDetails.name,
+      owner: repoDetails.owner?.login || owner,
       metrics: {
         totalCommits: commitsData.length,
         totalPullRequests: pullsData.length,
@@ -197,19 +184,28 @@ const getRepoAnalytics = async (req, res) => {
         healthScore,
         sprintCompletion
       },
-      chartData: {
-        commitActivity: [],
-        prActivity: [],
-        issueActivity: []
-      },
+      chartData: [],
       contributors: contributorsData.slice(0, 5),
       recentCommits: commitsData.slice(0, 5),
       aiInsights: {
         summary: insights.summary,
         bottlenecks: insights.bottlenecks || [],
         recommendations: insights.recommendations || []
-      }
-    });
+      },
+      analyzedAt: new Date()
+    };
+
+    if (repository) {
+      await Analytics.findOneAndUpdate(
+        { repositoryId: repository.githubId, userId: req.user._id },
+        { $set: analyticsPayload },
+        { upsert: true, new: true }
+      );
+    } else {
+      await Analytics.create(analyticsPayload);
+    }
+
+    return res.status(200).json(analyticsPayload);
 
   } catch (error) {
     if (error.message === "GitHub token missing in backend .env") {
@@ -219,9 +215,22 @@ const getRepoAnalytics = async (req, res) => {
   }
 };
 
+const testGithub = async (req, res) => {
+  try {
+    const { username } = req.params;
+    const github = getGitHubClient();
+    const response = await github.get(`/users/${username}`);
+    res.json(response.data);
+  } catch (error) {
+    console.error("Direct GitHub Test Error:", error.response?.data || error.message);
+    res.status(500).json({ error: error.response?.data || error.message });
+  }
+};
+
 module.exports = {
   connectGitHub,
   disconnectGithub,
   getRepos,
-  getRepoAnalytics
+  getRepoAnalytics,
+  testGithub
 };

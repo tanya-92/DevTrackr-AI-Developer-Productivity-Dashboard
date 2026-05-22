@@ -21,22 +21,26 @@ class AiService {
         Closed Pull Requests: ${pulls.filter(p => p.state === 'closed').length}
         Open Issues: ${issues.filter(i => i.state === 'open').length}
         
-        Return ONLY a JSON object (no markdown, no backticks, just raw JSON) with the following structure:
+        Return ONLY valid JSON with this exact structure:
         {
-          "summary": "A 2-3 sentence sprint summary of the recent repository activity.",
-          "bottlenecks": ["Bottleneck 1", "Bottleneck 2"],
-          "recommendations": ["Recommendation 1", "Recommendation 2", "Recommendation 3"]
+          "summary": "short sprint summary",
+          "bottlenecks": ["point 1", "point 2"],
+          "recommendations": ["point 1", "point 2"]
         }
       `;
 
       const response = await axios.post(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`,
         {
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.2,
-            responseMimeType: "application/json"
-          }
+          contents: [
+            {
+              parts: [
+                {
+                  text: prompt
+                }
+              ]
+            }
+          ]
         },
         {
           headers: {
@@ -45,21 +49,33 @@ class AiService {
         }
       );
 
-      const responseText = response.data.candidates[0].content.parts[0].text;
-      const parsedData = JSON.parse(responseText);
+      let rawText = response.data.candidates[0].content.parts[0].text;
+      
+      // Clean the response before JSON.parse
+      let cleanedText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
 
-      return {
-        summary: parsedData.summary || "No summary provided.",
-        bottlenecks: parsedData.bottlenecks || [],
-        recommendations: parsedData.recommendations || []
-      };
+      try {
+        const parsedData = JSON.parse(cleanedText);
+        return {
+          summary: parsedData.summary || "No summary provided.",
+          bottlenecks: parsedData.bottlenecks || [],
+          recommendations: parsedData.recommendations || []
+        };
+      } catch (parseError) {
+        console.error("JSON Parse Error on Gemini response:", parseError);
+        return {
+          summary: rawText,
+          bottlenecks: [],
+          recommendations: []
+        };
+      }
 
     } catch (error) {
-      console.error('AI Service Error:', error.response?.data || error.message);
+      console.error("Gemini API Error:", error.response?.data || error.message);
       return {
-        summary: "Error generating AI insights. The repository data was analyzed manually.",
-        bottlenecks: ["Unable to analyze bottlenecks due to AI service error"],
-        recommendations: ["Check API rate limits or Gemini configuration"]
+        summary: "AI insights unavailable. Check GEMINI_API_KEY or Gemini API configuration.",
+        bottlenecks: [],
+        recommendations: []
       };
     }
   }
