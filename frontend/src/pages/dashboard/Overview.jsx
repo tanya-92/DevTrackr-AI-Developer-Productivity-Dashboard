@@ -67,7 +67,7 @@ const Overview = () => {
         <div className="glass-card p-10 max-w-lg">
           <GitCommit className="w-16 h-16 text-primary mx-auto mb-4 opacity-50" />
           <h2 className="text-2xl font-bold text-textMain mb-2">No data available</h2>
-          <p className="text-textMuted mb-6">No activity data available yet. Analyze a repository first.</p>
+          <p className="text-textMuted mb-6">No activity data available yet. Connect GitHub and analyze a repository first.</p>
           <button className="btn-primary" onClick={() => window.location.href = '/dashboard/repos'}>
             Go to Repositories
           </button>

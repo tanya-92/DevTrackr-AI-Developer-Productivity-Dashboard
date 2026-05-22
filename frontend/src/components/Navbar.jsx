@@ -4,7 +4,7 @@ import { LogOut, Settings, GitBranch, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Navbar = () => {
-  const { user, logout } = useContext(AuthContext);
+  const { user, logout, updateGithubConnection } = useContext(AuthContext);
   const [showProfile, setShowProfile] = useState(false);
   const navigate = useNavigate();
 
@@ -63,7 +63,6 @@ const Navbar = () => {
                   {user?.githubUsername ? `Connected: ${user.githubUsername}` : 'No GitHub connected'}
                 </span>
               </div>
-
               <button 
                 onClick={() => {
                   setShowProfile(false);

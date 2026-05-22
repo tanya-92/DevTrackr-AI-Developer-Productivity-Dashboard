@@ -30,7 +30,19 @@ const analyticsSchema = new mongoose.Schema({
     type: Array,
     default: []
   },
-  recentCommits: {
+  commits: {
+    type: Array,
+    default: []
+  },
+  pullRequests: {
+    type: Array,
+    default: []
+  },
+  issues: {
+    type: Array,
+    default: []
+  },
+  deployments: {
     type: Array,
     default: []
   },

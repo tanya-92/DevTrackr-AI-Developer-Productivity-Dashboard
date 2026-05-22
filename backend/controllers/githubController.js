@@ -87,20 +87,7 @@ const connectGitHub = async (req, res) => {
   }
 };
 
-const disconnectGithub = async (req, res) => {
-  try {
-    const user = await User.findById(req.user._id);
-    if (user) {
-      user.githubUsername = '';
-      await user.save();
-      return res.status(200).json({ message: "GitHub disconnected successfully" });
-    } else {
-      return res.status(404).json({ message: "User not found" });
-    }
-  } catch (error) {
-    return res.status(500).json({ message: error.message });
-  }
-};
+
 
 const getRepos = async (req, res) => {
   try {
@@ -115,6 +102,9 @@ const getRepos = async (req, res) => {
       description: repo.description || "",
       url: repo.htmlUrl,
       language: repo.language,
+      languages: repo.languages || {},
+      watchers: repo.watchers || 0,
+      defaultBranch: repo.defaultBranch || 'main',
       stars: repo.stars,
       forks: repo.forks,
       openIssues: repo.openIssues
@@ -126,25 +116,183 @@ const getRepos = async (req, res) => {
   }
 };
 
+const getRepoDetails = async (req, res) => {
+  try {
+    const { owner, repo } = req.params;
+    const github = getGitHubClient();
+
+    const [
+      repoDetailsRes,
+      languagesRes,
+      commitsRes,
+      pullsRes,
+      issuesRes,
+      contributorsRes,
+      deploymentsRes,
+      readmeRes
+    ] = await Promise.allSettled([
+      github.get(`/repos/${owner}/${repo}`),
+      github.get(`/repos/${owner}/${repo}/languages`),
+      github.get(`/repos/${owner}/${repo}/commits?per_page=100`),
+      github.get(`/repos/${owner}/${repo}/pulls?state=all&per_page=100`),
+      github.get(`/repos/${owner}/${repo}/issues?state=all&per_page=100`),
+      github.get(`/repos/${owner}/${repo}/contributors?per_page=100`),
+      github.get(`/repos/${owner}/${repo}/deployments?per_page=100`),
+      github.get(`/repos/${owner}/${repo}/readme`)
+    ]);
+
+    const repoDetails = repoDetailsRes.status === "fulfilled" ? repoDetailsRes.value.data : null;
+    if (!repoDetails) {
+      return res.status(404).json({ message: "Repository not found or access denied" });
+    }
+
+    const languages = languagesRes.status === "fulfilled" ? languagesRes.value.data : {};
+    const commits = commitsRes.status === "fulfilled" ? commitsRes.value.data.map(c => ({
+      message: c.commit?.message,
+      authorName: c.commit?.author?.name,
+      authorUsername: c.author?.login,
+      date: c.commit?.author?.date,
+      sha: c.sha,
+      url: c.html_url
+    })) : [];
+    
+    const pullRequests = pullsRes.status === "fulfilled" ? pullsRes.value.data.map(p => ({
+      title: p.title,
+      state: p.state,
+      createdAt: p.created_at,
+      mergedAt: p.merged_at,
+      user: p.user?.login,
+      url: p.html_url
+    })) : [];
+
+    const allIssues = issuesRes.status === "fulfilled" ? issuesRes.value.data : [];
+    const issues = allIssues.filter(i => !i.pull_request).map(i => ({
+      title: i.title,
+      state: i.state,
+      labels: i.labels?.map(l => l.name) || [],
+      createdAt: i.created_at,
+      closedAt: i.closed_at,
+      user: i.user?.login,
+      url: i.html_url
+    }));
+
+    const contributors = contributorsRes.status === "fulfilled" ? contributorsRes.value.data.map(c => ({
+      username: c.login,
+      avatar: c.avatar_url,
+      contributions: c.contributions,
+      profileUrl: c.html_url
+    })) : [];
+
+    const deployments = deploymentsRes.status === "fulfilled" ? deploymentsRes.value.data.map(d => ({
+      environment: d.environment,
+      state: d.state || 'N/A',
+      createdAt: d.created_at,
+      updatedAt: d.updated_at,
+      sha: d.sha,
+      url: d.url
+    })) : [];
+
+    let readme = { readmeContent: "README not found" };
+    if (readmeRes.status === "fulfilled") {
+      const data = readmeRes.value.data;
+      const buff = Buffer.from(data.content, 'base64');
+      readme = {
+        readmeName: data.name,
+        readmeContent: buff.toString('utf-8'),
+        readmeHtml: data.html_url,
+        readmeUrl: data.html_url
+      };
+    }
+
+    // Update Repository Model
+    await Repository.findOneAndUpdate(
+      { githubId: repoDetails.id.toString(), userId: req.user._id },
+      { 
+        $set: {
+          watchers: repoDetails.watchers_count,
+          defaultBranch: repoDetails.default_branch,
+          visibility: repoDetails.visibility,
+          createdAtGithub: repoDetails.created_at,
+          pushedAtGithub: repoDetails.pushed_at,
+          languages,
+          readmeSummary: readme.readmeContent.substring(0, 200),
+          lastFetchedAt: new Date()
+        }
+      },
+      { new: true }
+    );
+
+    // Update Analytics Model
+    await Analytics.findOneAndUpdate(
+      { repositoryId: repoDetails.id.toString(), userId: req.user._id },
+      {
+        $set: {
+          commits,
+          pullRequests,
+          issues,
+          contributors,
+          deployments,
+          analyzedAt: new Date()
+        }
+      },
+      { upsert: true, new: true }
+    );
+
+    return res.status(200).json({
+      repo: repoDetails,
+      languages,
+      commits,
+      pullRequests,
+      issues,
+      contributors,
+      deployments,
+      readme
+    });
+
+  } catch (error) {
+    return res.status(500).json({ message: error.message || "Failed to fetch detailed repository data" });
+  }
+};
+
 const getRepoAnalytics = async (req, res) => {
   try {
     const { owner, repo } = req.params;
     
     const github = getGitHubClient();
 
-    const [repoDetailsRes, commits, pulls, issues, contributors] = await Promise.allSettled([
+    const [
+      repoDetailsRes,
+      languagesRes,
+      commitsRes,
+      pullsRes,
+      issuesRes,
+      contributorsRes,
+      deploymentsRes,
+      readmeRes
+    ] = await Promise.allSettled([
       github.get(`/repos/${owner}/${repo}`),
+      github.get(`/repos/${owner}/${repo}/languages`),
       github.get(`/repos/${owner}/${repo}/commits`),
       github.get(`/repos/${owner}/${repo}/pulls?state=all`),
       github.get(`/repos/${owner}/${repo}/issues?state=all`),
-      github.get(`/repos/${owner}/${repo}/contributors`)
+      github.get(`/repos/${owner}/${repo}/contributors`),
+      github.get(`/repos/${owner}/${repo}/deployments`),
+      github.get(`/repos/${owner}/${repo}/readme`)
     ]);
 
     const repoDetails = repoDetailsRes.status === "fulfilled" ? repoDetailsRes.value.data : { name: repo, owner: { login: owner } };
-    const commitsData = commits.status === "fulfilled" ? commits.value.data : [];
-    const pullsData = pulls.status === "fulfilled" ? pulls.value.data : [];
-    const allIssues = issues.status === "fulfilled" ? issues.value.data : [];
-    const contributorsData = contributors.status === "fulfilled" ? contributors.value.data : [];
+    const languagesData = languagesRes.status === "fulfilled" ? languagesRes.value.data : {};
+    const commitsData = commitsRes.status === "fulfilled" ? commitsRes.value.data : [];
+    const pullsData = pullsRes.status === "fulfilled" ? pullsRes.value.data : [];
+    const allIssues = issuesRes.status === "fulfilled" ? issuesRes.value.data : [];
+    const contributorsData = contributorsRes.status === "fulfilled" ? contributorsRes.value.data : [];
+    const deploymentsData = deploymentsRes.status === "fulfilled" ? deploymentsRes.value.data : [];
+    
+    let readmeData = { content: "" };
+    if (readmeRes.status === "fulfilled") {
+      const buff = Buffer.from(readmeRes.value.data.content, 'base64');
+      readmeData.content = buff.toString('utf-8');
+    }
 
     // Filter out PRs from issues (GitHub API returns PRs as issues)
     const issuesData = allIssues.filter(issue => !issue.pull_request);
@@ -162,7 +310,11 @@ const getRepoAnalytics = async (req, res) => {
       repoDetails, 
       commitsData, 
       pullsData, 
-      issuesData
+      issuesData,
+      languagesData,
+      contributorsData,
+      deploymentsData,
+      readmeData
     );
 
     const repository = await Repository.findOne({ fullName: `${owner}/${repo}`, userId: req.user._id });
@@ -231,6 +383,7 @@ module.exports = {
   connectGitHub,
   disconnectGithub,
   getRepos,
+  getRepoDetails,
   getRepoAnalytics,
   testGithub
 };

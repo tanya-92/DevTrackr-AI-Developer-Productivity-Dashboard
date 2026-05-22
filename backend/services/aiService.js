@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 class AiService {
-  async generateRepositoryInsights(repoDetails, commits, pulls, issues) {
+  async generateRepositoryInsights(repoDetails, commits, pulls, issues, languages, contributors, deployments, readme) {
     try {
       if (!process.env.GEMINI_API_KEY) {
         return {
@@ -16,12 +16,18 @@ class AiService {
 
       // Extract recent commit messages safely
       const recentCommitMessages = commits.slice(0, 10).map(c => c.commit?.message).filter(Boolean).join(" | ");
+      const techStack = Object.keys(languages || {}).join(", ");
+      const deploymentsInfo = (deployments || []).slice(0, 3).map(d => `${d.environment} (${d.state})`).join(", ");
+      const topContributors = (contributors || []).slice(0, 5).map(c => `${c.login} (${c.contributions} commits)`).join(", ");
 
       const prompt = `
         Analyze the following GitHub repository data and provide detailed insights for a developer productivity dashboard.
         
         Repository: ${repoDetails.name}
         Description: ${repoDetails.description || 'N/A'}
+        Tech Stack: ${techStack || 'Unknown'}
+        Top Contributors: ${topContributors || 'None'}
+        Recent Deployments: ${deploymentsInfo || 'No recent deployments'}
         Recent Commits (last 100): ${commits.length}
         Recent Commit Messages: ${recentCommitMessages.substring(0, 500)}...
         Open Pull Requests: ${pulls.filter(p => p.state === 'open').length}
@@ -29,10 +35,16 @@ class AiService {
         Open Issues: ${issues.filter(i => i.state === 'open').length}
         Closed Issues: ${issues.filter(i => i.state === 'closed').length}
         
+        README Snippet:
+        ${(readme?.content || '').substring(0, 600)}...
+        
         You must analyze:
+        - project purpose based on README
+        - tech stack usage
         - commit count and recent commit messages
         - pull requests and issue resolution
         - repo activity, sprint progress, bottlenecks, and productivity patterns
+        - deployment status insight
         
         Rules:
         - Do not return one-word or generic answers.

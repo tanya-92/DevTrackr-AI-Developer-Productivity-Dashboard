@@ -10,20 +10,6 @@ const Settings = () => {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  const handleDisconnectGithub = async () => {
-    try {
-      setLoading(true);
-      setMessage('');
-      setError('');
-      await api.post('/github/disconnect');
-      updateGithubConnection('');
-      setMessage('GitHub account successfully disconnected.');
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to disconnect GitHub account.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -84,14 +70,6 @@ const Settings = () => {
                 <p className="text-sm text-textMuted">Your account is actively syncing repositories.</p>
               </div>
             </div>
-            
-            <button 
-              onClick={handleDisconnectGithub}
-              disabled={loading}
-              className="btn-secondary border-red-500/50 text-red-400 hover:bg-red-500/10"
-            >
-              {loading ? 'Disconnecting...' : 'Disconnect GitHub Account'}
-            </button>
           </div>
         ) : (
           <div>

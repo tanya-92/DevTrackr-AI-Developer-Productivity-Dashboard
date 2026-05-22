@@ -45,8 +45,35 @@ const repositorySchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  visibility: {
+    type: String,
+  },
+  watchers: {
+    type: Number,
+    default: 0,
+  },
+  defaultBranch: {
+    type: String,
+  },
+  languages: {
+    type: Object,
+    default: {},
+  },
+  readmeSummary: {
+    type: String,
+  },
+  createdAtGithub: {
+    type: Date,
+  },
+  pushedAtGithub: {
+    type: Date,
+  },
   updatedAtGithub: {
     type: Date,
+  },
+  lastFetchedAt: {
+    type: Date,
+    default: Date.now,
   }
 }, {
   timestamps: true,

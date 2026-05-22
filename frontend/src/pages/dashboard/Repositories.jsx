@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { GitBranch, Star, GitFork, AlertCircle, Plus, RefreshCw, BarChart2 } from 'lucide-react';
 import api from '../../services/api';
 import { AuthContext } from '../../context/AuthContext';
+import RepoDetailsModal from '../../components/RepoDetailsModal';
 
 const Repositories = () => {
   const [repos, setRepos] = useState([]);
@@ -12,6 +13,7 @@ const Repositories = () => {
   
   const [analyticsData, setAnalyticsData] = useState(null);
   const [analyzingRepo, setAnalyzingRepo] = useState(null);
+  const [selectedRepoForDetails, setSelectedRepoForDetails] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [analyticsError, setAnalyticsError] = useState('');
 
@@ -117,17 +119,28 @@ const Repositories = () => {
         <h2 className="text-2xl font-bold flex items-center gap-2">
           <GitBranch className="w-6 h-6" /> Your Repositories
         </h2>
-        <button 
-          onClick={() => fetchRepos(user.githubUsername)} 
-          disabled={loading}
-          className="btn-secondary flex items-center gap-2"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => fetchRepos(user.githubUsername)} 
+            disabled={loading}
+            className="btn-secondary flex items-center gap-2"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+          
+        </div>
       </div>
 
       {error && <div className="text-red-500 text-sm bg-red-500/10 p-4 rounded-lg">{error}</div>}
+
+      {/* Details Modal */}
+      {selectedRepoForDetails && (
+        <RepoDetailsModal 
+          repoFullName={selectedRepoForDetails} 
+          onClose={() => setSelectedRepoForDetails(null)} 
+        />
+      )}
 
       {/* Analytics Modal / View */}
       {analyzingRepo && (
@@ -263,23 +276,46 @@ const Repositories = () => {
                   {repo.description || 'No description provided.'}
                 </p>
                 
-                <div className="flex items-center gap-4 text-sm text-textMuted mb-6">
-                  {repo.language && (
-                    <span className="flex items-center gap-1">
-                      <span className="w-3 h-3 rounded-full bg-blue-400"></span>
+                <div className="flex flex-wrap items-center gap-2 text-sm text-textMuted mb-6">
+                  {repo.languages && Object.keys(repo.languages).length > 0 ? (
+                    Object.keys(repo.languages).slice(0, 3).map(lang => (
+                      <span key={lang} className="flex items-center gap-1 bg-slate-800 px-2 py-0.5 rounded text-xs">
+                        <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+                        {lang}
+                      </span>
+                    ))
+                  ) : repo.language ? (
+                    <span className="flex items-center gap-1 bg-slate-800 px-2 py-0.5 rounded text-xs">
+                      <span className="w-2 h-2 rounded-full bg-blue-400"></span>
                       {repo.language}
                     </span>
-                  )}
-                  <span className="flex items-center gap-1"><Star className="w-4 h-4" /> {repo.stars}</span>
+                  ) : null}
+                  <span className="flex items-center gap-1 ml-auto"><Star className="w-4 h-4" /> {repo.stars}</span>
                   <span className="flex items-center gap-1"><GitFork className="w-4 h-4" /> {repo.forks}</span>
                 </div>
 
-                <button 
-                  onClick={() => handleAnalyzeRepo(repo)}
-                  className="btn-primary w-full flex justify-center items-center gap-2"
+                <div className="grid grid-cols-2 gap-2 mt-auto">
+                  <button 
+                    onClick={() => setSelectedRepoForDetails(repo.fullName)}
+                    className="btn-secondary w-full flex justify-center items-center gap-2 text-sm"
+                  >
+                    View Details
+                  </button>
+                  <button 
+                    onClick={() => handleAnalyzeRepo(repo)}
+                    className="btn-primary w-full flex justify-center items-center gap-2 text-sm bg-purple-600 hover:bg-purple-700"
+                  >
+                    <BarChart2 className="w-4 h-4" /> Analyze
+                  </button>
+                </div>
+                <a 
+                  href={repo.url} 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="text-center text-xs text-textMuted hover:text-white mt-4 border-t border-cardBorder pt-3"
                 >
-                  <BarChart2 className="w-4 h-4" /> Analyze Repo
-                </button>
+                  Open on GitHub
+                </a>
               </motion.div>
             );
           })}
