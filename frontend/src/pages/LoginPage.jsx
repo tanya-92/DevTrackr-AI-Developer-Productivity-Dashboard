@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Activity, Github } from 'lucide-react';
+import { Activity, GitBranch } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 
 const LoginPage = () => {

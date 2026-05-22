@@ -1,16 +1,17 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { 
-  connectGithub, 
-  getGithubRepos, 
-  selectRepository,
-  getConnectedRepos
-} = require('../controllers/githubController');
-const { protect } = require('../middleware/authMiddleware');
+const {
+  connectGitHub,
+  getRepos,
+  getRepoAnalytics,
+  disconnectGithub
+} = require("../controllers/githubController");
 
-router.post('/connect', protect, connectGithub);
-router.get('/repos', protect, getGithubRepos);
-router.post('/repo', protect, selectRepository);
-router.get('/connected-repos', protect, getConnectedRepos);
+const { protect } = require("../middleware/authMiddleware");
+
+router.post("/connect", protect, connectGitHub);
+router.post("/disconnect", protect, disconnectGithub);
+router.get("/repos/:username", protect, getRepos);
+router.get("/repo/:owner/:repo/analytics", protect, getRepoAnalytics);
 
 module.exports = router;

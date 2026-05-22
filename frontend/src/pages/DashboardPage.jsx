@@ -4,6 +4,7 @@ import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 import Overview from './dashboard/Overview';
 import Repositories from './dashboard/Repositories';
+import Settings from './dashboard/Settings';
 
 const DashboardPage = () => {
   return (
@@ -17,7 +18,7 @@ const DashboardPage = () => {
           <Routes>
             <Route path="/" element={<Overview />} />
             <Route path="/repos" element={<Repositories />} />
-            {/* Add more routes like settings here */}
+            <Route path="/settings" element={<Settings />} />
           </Routes>
         </main>
       </div>

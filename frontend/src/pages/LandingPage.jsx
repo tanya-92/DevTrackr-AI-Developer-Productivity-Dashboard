@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Activity, Github, BarChart2, Zap } from 'lucide-react';
+import { Activity, GitBranch, BarChart2, Zap } from 'lucide-react';
 
 const LandingPage = () => {
   return (
@@ -41,7 +41,7 @@ const LandingPage = () => {
           </p>
           <div className="flex justify-center gap-4">
             <Link to="/signup" className="btn-primary text-lg px-8 py-3 flex items-center gap-2">
-              <Github className="w-5 h-5" />
+              <GitBranch className="w-5 h-5" />
               Connect GitHub
             </Link>
           </div>

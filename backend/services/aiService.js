@@ -1,24 +1,13 @@
-const OpenAI = require('openai');
+const axios = require('axios');
 
 class AiService {
-  constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-  }
-
   async generateRepositoryInsights(repoDetails, commits, pulls, issues) {
     try {
-      if (!process.env.OPENAI_API_KEY) {
+      if (!process.env.GEMINI_API_KEY) {
         return {
-          summary: "OpenAI API key not configured. Mock summary: The repository is active but needs review on open PRs.",
-          recommendations: [
-            "Review open pull requests",
-            "Address pending issues",
-            "Configure OpenAI API key for real insights"
-          ],
-          healthScore: 85,
-          sprintCompletion: 70
+          summary: "AI insights unavailable. Add GEMINI_API_KEY in backend .env.",
+          bottlenecks: [],
+          recommendations: []
         };
       }
 
@@ -32,32 +21,45 @@ class AiService {
         Closed Pull Requests: ${pulls.filter(p => p.state === 'closed').length}
         Open Issues: ${issues.filter(i => i.state === 'open').length}
         
-        Provide a JSON response with the following structure:
+        Return ONLY a JSON object (no markdown, no backticks, just raw JSON) with the following structure:
         {
-          "summary": "A 2-3 sentence summary of the recent repository activity.",
-          "recommendations": ["Recommendation 1", "Recommendation 2", "Recommendation 3"],
-          "healthScore": A number from 0 to 100 representing repository health (based on open issues vs closed PRs/commits),
-          "sprintCompletion": A number from 0 to 100 representing estimated sprint completion (just an estimation based on the ratio of closed PRs to open issues/PRs)
+          "summary": "A 2-3 sentence sprint summary of the recent repository activity.",
+          "bottlenecks": ["Bottleneck 1", "Bottleneck 2"],
+          "recommendations": ["Recommendation 1", "Recommendation 2", "Recommendation 3"]
         }
       `;
 
-      const response = await this.openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [
-          { role: "system", content: "You are an AI developer productivity analyst." },
-          { role: "user", content: prompt }
-        ],
-        response_format: { type: "json_object" }
-      });
+      const response = await axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        {
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.2,
+            responseMimeType: "application/json"
+          }
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
 
-      return JSON.parse(response.choices[0].message.content);
+      const responseText = response.data.candidates[0].content.parts[0].text;
+      const parsedData = JSON.parse(responseText);
+
+      return {
+        summary: parsedData.summary || "No summary provided.",
+        bottlenecks: parsedData.bottlenecks || [],
+        recommendations: parsedData.recommendations || []
+      };
+
     } catch (error) {
-      console.error('AI Service Error:', error);
+      console.error('AI Service Error:', error.response?.data || error.message);
       return {
         summary: "Error generating AI insights. The repository data was analyzed manually.",
-        recommendations: ["Check API rate limits", "Ensure API key is valid"],
-        healthScore: 70,
-        sprintCompletion: 50
+        bottlenecks: ["Unable to analyze bottlenecks due to AI service error"],
+        recommendations: ["Check API rate limits or Gemini configuration"]
       };
     }
   }

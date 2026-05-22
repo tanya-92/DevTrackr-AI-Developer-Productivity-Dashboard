@@ -31,7 +31,7 @@ const getAnalytics = async (req, res) => {
     
     // Generate new analytics
     const user = await User.findById(req.user._id);
-    const githubService = new GithubService(user.githubToken);
+    const githubService = new GithubService();
     
     // Fetch data from GitHub
     const owner = repository.fullName.split('/')[0];

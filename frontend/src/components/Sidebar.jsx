@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Activity, LayoutDashboard, Github, Settings, LogOut } from 'lucide-react';
+import { Activity, LayoutDashboard, GitBranch, Settings, LogOut } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 
 const Sidebar = () => {
@@ -8,7 +8,7 @@ const Sidebar = () => {
 
   const navItems = [
     { icon: LayoutDashboard, label: 'Overview', path: '/dashboard' },
-    { icon: Github, label: 'Repositories', path: '/dashboard/repos' },
+    { icon: GitBranch, label: 'Repositories', path: '/dashboard/repos' },
     { icon: Settings, label: 'Settings', path: '/dashboard/settings' },
   ];
 
