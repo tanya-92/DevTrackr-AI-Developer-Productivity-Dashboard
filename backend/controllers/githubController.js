@@ -219,7 +219,7 @@ const getRepoDetails = async (req, res) => {
           lastFetchedAt: new Date()
         }
       },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     // Update Analytics Model
@@ -235,7 +235,7 @@ const getRepoDetails = async (req, res) => {
           analyzedAt: new Date()
         }
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     return res.status(200).json({
@@ -351,7 +351,7 @@ const getRepoAnalytics = async (req, res) => {
       await Analytics.findOneAndUpdate(
         { repositoryId: repository.githubId, userId: req.user._id },
         { $set: analyticsPayload },
-        { upsert: true, new: true }
+        { upsert: true, returnDocument: 'after' }
       );
     } else {
       await Analytics.create(analyticsPayload);
@@ -381,7 +381,6 @@ const testGithub = async (req, res) => {
 
 module.exports = {
   connectGitHub,
-  disconnectGithub,
   getRepos,
   getRepoDetails,
   getRepoAnalytics,

@@ -272,10 +272,6 @@ const Repositories = () => {
                   <h3 className="text-lg font-bold truncate pr-2" title={repo.name}>{repo.name}</h3>
                 </div>
                 
-                <p className="text-textMuted text-sm mb-6 flex-1 line-clamp-2">
-                  {repo.description || 'No description provided.'}
-                </p>
-                
                 <div className="flex flex-wrap items-center gap-2 text-sm text-textMuted mb-6">
                   {repo.languages && Object.keys(repo.languages).length > 0 ? (
                     Object.keys(repo.languages).slice(0, 3).map(lang => (
