@@ -191,27 +191,58 @@ const Overview = () => {
           transition={{ duration: 0.5, delay: 0.7 }}
           className="glass-card p-6 bg-primary/5 border border-primary/20"
         >
-          <h3 className="text-xl font-bold mb-4 text-primary flex items-center gap-2">
-            <span className="text-2xl">✨</span> Latest Repo You Opened ({analytics.repo?.name})
-          </h3>
-          <p className="text-textMain mb-4">{aiInsights.summary}</p>
+          <div className="flex justify-between items-start mb-4">
+            <h3 className="text-xl font-bold text-primary flex items-center gap-2">
+              <span className="text-2xl">✨</span> Latest Repo You Opened ({analytics.repoName})
+            </h3>
+            {aiInsights.riskLevel && (
+              <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
+                aiInsights.riskLevel.toLowerCase().includes('high') ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                aiInsights.riskLevel.toLowerCase().includes('medium') ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
+                'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+              }`}>
+                Risk: {aiInsights.riskLevel}
+              </span>
+            )}
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {aiInsights.bottlenecks?.length > 0 && (
+          <div className="space-y-6">
+            <div>
+              <h4 className="font-semibold text-textMain mb-1 border-b border-white/10 pb-1">Sprint Summary</h4>
+              <p className="text-textMuted text-sm leading-relaxed">{aiInsights.summary}</p>
+            </div>
+
+            {aiInsights.productivityAnalysis && (
               <div>
-                <h4 className="font-semibold text-red-400 mb-2">Bottlenecks</h4>
-                <ul className="list-disc list-inside text-textMuted">
-                  {aiInsights.bottlenecks.map((b, i) => <li key={i}>{b}</li>)}
-                </ul>
+                <h4 className="font-semibold text-textMain mb-1 border-b border-white/10 pb-1">Productivity Analysis</h4>
+                <p className="text-textMuted text-sm leading-relaxed">{aiInsights.productivityAnalysis}</p>
               </div>
             )}
-            
-            {aiInsights.recommendations?.length > 0 && (
-              <div>
-                <h4 className="font-semibold text-emerald-400 mb-2">Recommendations</h4>
-                <ul className="list-disc list-inside text-textMuted">
-                  {aiInsights.recommendations.map((r, i) => <li key={i}>{r}</li>)}
-                </ul>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {aiInsights.bottlenecks?.length > 0 && (
+                <div className="bg-red-500/5 p-3 rounded-md border border-red-500/10">
+                  <h4 className="font-semibold text-red-400 mb-2">Bottlenecks</h4>
+                  <ul className="list-disc list-inside text-textMuted text-sm space-y-1">
+                    {aiInsights.bottlenecks.map((b, i) => <li key={i}>{b}</li>)}
+                  </ul>
+                </div>
+              )}
+              
+              {aiInsights.recommendations?.length > 0 && (
+                <div className="bg-emerald-500/5 p-3 rounded-md border border-emerald-500/10">
+                  <h4 className="font-semibold text-emerald-400 mb-2">Recommendations</h4>
+                  <ul className="list-disc list-inside text-textMuted text-sm space-y-1">
+                    {aiInsights.recommendations.map((r, i) => <li key={i}>{r}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            {aiInsights.healthComment && (
+              <div className="bg-blue-500/5 p-4 rounded-md border border-blue-500/10">
+                <h4 className="font-semibold text-blue-400 mb-1">Health Comment</h4>
+                <p className="text-textMuted text-sm italic">"{aiInsights.healthComment}"</p>
               </div>
             )}
           </div>

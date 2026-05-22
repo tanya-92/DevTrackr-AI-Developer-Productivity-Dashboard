@@ -178,31 +178,58 @@ const Repositories = () => {
               
               {analyticsData.aiInsights && (
                 <div className="mt-6 bg-primary/10 border border-primary/20 p-6 rounded-lg">
-                  <h4 className="text-xl font-bold mb-4 text-primary flex items-center gap-2">
-                    <span className="text-2xl">✨</span> AI Insights
-                  </h4>
+                  <div className="flex justify-between items-start mb-4">
+                    <h4 className="text-xl font-bold text-primary flex items-center gap-2">
+                      <span className="text-2xl">✨</span> AI Insights
+                    </h4>
+                    {analyticsData.aiInsights.riskLevel && (
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
+                        analyticsData.aiInsights.riskLevel.toLowerCase().includes('high') ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                        analyticsData.aiInsights.riskLevel.toLowerCase().includes('medium') ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
+                        'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                      }`}>
+                        Risk: {analyticsData.aiInsights.riskLevel}
+                      </span>
+                    )}
+                  </div>
                   
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     <div>
-                      <h5 className="font-semibold text-textMain mb-1">Sprint Summary</h5>
-                      <p className="text-textMuted">{analyticsData.aiInsights.summary}</p>
+                      <h5 className="font-semibold text-textMain mb-1 border-b border-white/10 pb-1">Sprint Summary</h5>
+                      <p className="text-textMuted text-sm leading-relaxed">{analyticsData.aiInsights.summary}</p>
                     </div>
 
-                    {analyticsData.aiInsights.bottlenecks?.length > 0 && (
+                    {analyticsData.aiInsights.productivityAnalysis && (
                       <div>
-                        <h5 className="font-semibold text-textMain mb-1 text-red-400">Identified Bottlenecks</h5>
-                        <ul className="list-disc list-inside text-textMuted">
-                          {analyticsData.aiInsights.bottlenecks.map((item, i) => <li key={i}>{item}</li>)}
-                        </ul>
+                        <h5 className="font-semibold text-textMain mb-1 border-b border-white/10 pb-1">Productivity Analysis</h5>
+                        <p className="text-textMuted text-sm leading-relaxed">{analyticsData.aiInsights.productivityAnalysis}</p>
                       </div>
                     )}
 
-                    {analyticsData.aiInsights.recommendations?.length > 0 && (
-                      <div>
-                        <h5 className="font-semibold text-textMain mb-1 text-emerald-400">Recommendations</h5>
-                        <ul className="list-disc list-inside text-textMuted">
-                          {analyticsData.aiInsights.recommendations.map((item, i) => <li key={i}>{item}</li>)}
-                        </ul>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {analyticsData.aiInsights.bottlenecks?.length > 0 && (
+                        <div className="bg-red-500/5 p-3 rounded-md border border-red-500/10">
+                          <h5 className="font-semibold text-red-400 mb-2">Identified Bottlenecks</h5>
+                          <ul className="list-disc list-inside text-textMuted text-sm space-y-1">
+                            {analyticsData.aiInsights.bottlenecks.map((item, i) => <li key={i}>{item}</li>)}
+                          </ul>
+                        </div>
+                      )}
+
+                      {analyticsData.aiInsights.recommendations?.length > 0 && (
+                        <div className="bg-emerald-500/5 p-3 rounded-md border border-emerald-500/10">
+                          <h5 className="font-semibold text-emerald-400 mb-2">Recommendations</h5>
+                          <ul className="list-disc list-inside text-textMuted text-sm space-y-1">
+                            {analyticsData.aiInsights.recommendations.map((item, i) => <li key={i}>{item}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+
+                    {analyticsData.aiInsights.healthComment && (
+                      <div className="bg-blue-500/5 p-4 rounded-md border border-blue-500/10">
+                        <h5 className="font-semibold text-blue-400 mb-1">Health Comment</h5>
+                        <p className="text-textMuted text-sm italic">"{analyticsData.aiInsights.healthComment}"</p>
                       </div>
                     )}
                   </div>
